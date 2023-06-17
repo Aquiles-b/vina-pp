@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <time.h>
+#define TAM_BUFFER 1024
 
 struct membro {
     char *nome;
@@ -16,6 +17,7 @@ struct membro {
 struct diretorio {
     FILE *archive;
     unsigned long tam;
+    unsigned long prox_posi;
     struct membro **mbrs;
 };
 
@@ -30,6 +32,7 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
     dir->archive = fopen(arc, "w");
     dir->mbrs = NULL;
     dir->tam = 0;
+    dir->prox_posi = 9;
 }
 
 void ler_archive(struct diretorio *dir)
@@ -44,7 +47,7 @@ void ler_archive(struct diretorio *dir)
         fread(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
 }
 
-int inicia_diretorio(char *archive)
+struct diretorio *inicia_diretorio(char *archive)
 {
     struct diretorio *dir = malloc(sizeof(struct diretorio));
     if (dir == NULL)
@@ -55,7 +58,7 @@ int inicia_diretorio(char *archive)
     else
         ler_archive(dir);
 
-    return 0;
+    return dir;
 }
 
 void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long tam)
@@ -79,15 +82,45 @@ int add_membro(char *nome, struct diretorio *dir)
         falta_de_memoria();
 
     pega_props(nome, mem, propriedades, ftell(dir->archive));
-    
+
     dir->mbrs[dir->tam] = mem;
+    dir->tam++;
+
+    return 0;
+}
+
+unsigned long le_dados_membro(struct membro *mbr, unsigned char *buffer)
+{
+    FILE *arq = fopen(mbr->nome, "r");
+    unsigned long j;
+    for(j = 0; j < mbr->tam; j++)
+        fread(buffer + j, sizeof(unsigned char), 1, arq);
+    fclose(arq);
+
+    return j;
+}
+
+int monta_archive(struct diretorio *dir)
+{
+    unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
+    unsigned long posi_dir, limite_buffer;
+    posi_dir = ftell(dir->archive);
+    fwrite(&posi_dir, sizeof(unsigned long), 1, dir->archive);
+    for(unsigned long i = 0; i < dir->tam; i++) {
+        limite_buffer = le_dados_membro(dir->mbrs[i], buffer_write);
+        fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
+    }
+
+    fclose(dir->archive);
 
     return 0;
 }
 
 int main()
 {
-    /* add_membro("makefile"); */
+    struct diretorio *dir = inicia_diretorio("archive.vpp");
+    add_membro("makefile", dir);
+    monta_archive(dir);
 
     return 0;
 }
