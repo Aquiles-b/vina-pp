@@ -96,41 +96,44 @@ int add_membro(char *nome, struct diretorio *dir)
     return 0;
 }
 
-unsigned long le_dados_membro(FILE *arq, unsigned char *buffer)
+unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FILE *arq)
 {
-    unsigned long j = 0;
-    while (j < TAM_BUFFER && !feof(arq)) {
-        fread(buffer + j, sizeof(unsigned char), 1, arq);
-        j++;
+    if (tam_mbr - TAM_BUFFER >= 0) {
+        fread(buffer, sizeof(unsigned char), TAM_BUFFER, arq);
+        tam_mbr -= TAM_BUFFER;
+        return TAM_BUFFER;
     }
-    if (feof(arq))
-        j--;
 
-    return j;
+    fread(buffer, sizeof(unsigned char), *tam_mbr, arq);
+    unsigned long aux = *tam_mbr;
+    *tam_mbr = 0;
+
+    return aux;
 }
 
 int monta_archive(struct diretorio *dir)
 {
-    if (dir->tam == 0)
+    if (dir->tam == 0) {
+        fprintf(stderr, "Nenhum arquivo a ser arquivado.\n");
         return 1;
+    }
     FILE *arq;
-    short status = TRUE;
     unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
-    unsigned long posi_dir, limite_buffer, i = 0; 
+    unsigned long posi_dir, limite_buffer, tam_mbr, i = 0; 
     posi_dir = ftell(dir->archive);
     fwrite(&posi_dir, sizeof(unsigned long), 1, dir->archive);
+
     arq = fopen(dir->mbrs[i]->nome, "r");
-    while (status) {
-        limite_buffer = le_dados_membro(arq, buffer_write);
-        fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
-        if (feof(arq)) {
-            i++;
+    tam_mbr = dir->mbrs[i]->tam;
+    while (i < dir->tam) {
+        if (tam_mbr == 0) {
             fclose(arq);
-            if (dir->tam > i)
-                arq = fopen(dir->mbrs[i]->nome, "r");
-            else
-                status = FALSE;
+            i++;
+            arq = fopen(dir->mbrs[i]->nome, "r");
+            tam_mbr = dir->mbrs[i]->tam;
         }
+        limite_buffer = le_dados_membro(&tam_mbr, buffer_write, arq);
+        fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
     }
     fclose(dir->archive);
 
