@@ -3,7 +3,7 @@ CFLAGS = -Wall -g
 vina: src/vina.c
 	gcc src/vina.c -o $@ $(CFLAGS)
 
-rv: vina
+run: vina
 	./vina
 
 clean:

@@ -2,7 +2,13 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #define TAM_BUFFER 1024
+#define QNT_MBRS 8
+#define TRUE 1
+#define FALSE 0
 
 struct membro {
     char *nome;
@@ -30,7 +36,7 @@ void falta_de_memoria()
 void cria_novo_dir(struct diretorio *dir, char *arc)
 {
     dir->archive = fopen(arc, "w");
-    dir->mbrs = NULL;
+    dir->mbrs = malloc(sizeof(struct membro *) * QNT_MBRS);
     dir->tam = 0;
     dir->prox_posi = 9;
 }
@@ -75,7 +81,7 @@ int add_membro(char *nome, struct diretorio *dir)
 {
     struct stat propriedades;
     int ok = stat(nome, &propriedades);
-    if (!ok)
+    if (ok)
         return 1;
     struct membro *mem = malloc(sizeof(struct membro));
     if (mem == NULL)
@@ -84,33 +90,48 @@ int add_membro(char *nome, struct diretorio *dir)
     pega_props(nome, mem, propriedades, ftell(dir->archive));
 
     dir->mbrs[dir->tam] = mem;
+    dir->prox_posi += propriedades.st_size;
     dir->tam++;
 
     return 0;
 }
 
-unsigned long le_dados_membro(struct membro *mbr, unsigned char *buffer)
+unsigned long le_dados_membro(FILE *arq, unsigned char *buffer)
 {
-    FILE *arq = fopen(mbr->nome, "r");
-    unsigned long j;
-    for(j = 0; j < mbr->tam; j++)
+    unsigned long j = 0;
+    while (j < TAM_BUFFER && !feof(arq)) {
         fread(buffer + j, sizeof(unsigned char), 1, arq);
-    fclose(arq);
+        j++;
+    }
+    if (feof(arq))
+        j--;
 
     return j;
 }
 
 int monta_archive(struct diretorio *dir)
 {
+    if (dir->tam == 0)
+        return 1;
+    FILE *arq;
+    short status = TRUE;
     unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
-    unsigned long posi_dir, limite_buffer;
+    unsigned long posi_dir, limite_buffer, i = 0; 
     posi_dir = ftell(dir->archive);
     fwrite(&posi_dir, sizeof(unsigned long), 1, dir->archive);
-    for(unsigned long i = 0; i < dir->tam; i++) {
-        limite_buffer = le_dados_membro(dir->mbrs[i], buffer_write);
+    arq = fopen(dir->mbrs[i]->nome, "r");
+    while (status) {
+        limite_buffer = le_dados_membro(arq, buffer_write);
         fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
+        if (feof(arq)) {
+            i++;
+            fclose(arq);
+            if (dir->tam > i)
+                arq = fopen(dir->mbrs[i]->nome, "r");
+            else
+                status = FALSE;
+        }
     }
-
     fclose(dir->archive);
 
     return 0;
@@ -119,6 +140,7 @@ int monta_archive(struct diretorio *dir)
 int main()
 {
     struct diretorio *dir = inicia_diretorio("archive.vpp");
+    add_membro("todo.txt", dir);
     add_membro("makefile", dir);
     monta_archive(dir);
 
