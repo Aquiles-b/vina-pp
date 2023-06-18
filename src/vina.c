@@ -98,12 +98,12 @@ int add_membro(char *nome, struct diretorio *dir)
 
 unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FILE *arq)
 {
-    if (tam_mbr - TAM_BUFFER >= 0) {
+    long status = (long) *tam_mbr - TAM_BUFFER;
+    if (status >= 0) {
         fread(buffer, sizeof(unsigned char), TAM_BUFFER, arq);
-        tam_mbr -= TAM_BUFFER;
+        *tam_mbr -= TAM_BUFFER;
         return TAM_BUFFER;
     }
-
     fread(buffer, sizeof(unsigned char), *tam_mbr, arq);
     unsigned long aux = *tam_mbr;
     *tam_mbr = 0;
@@ -118,6 +118,7 @@ int monta_archive(struct diretorio *dir)
         return 1;
     }
     FILE *arq;
+    short status = TRUE;
     unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
     unsigned long posi_dir, limite_buffer, tam_mbr, i = 0; 
     posi_dir = ftell(dir->archive);
@@ -125,15 +126,20 @@ int monta_archive(struct diretorio *dir)
 
     arq = fopen(dir->mbrs[i]->nome, "r");
     tam_mbr = dir->mbrs[i]->tam;
-    while (i < dir->tam) {
-        if (tam_mbr == 0) {
-            fclose(arq);
-            i++;
-            arq = fopen(dir->mbrs[i]->nome, "r");
-            tam_mbr = dir->mbrs[i]->tam;
-        }
+    while (status) {
         limite_buffer = le_dados_membro(&tam_mbr, buffer_write, arq);
         fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
+        if (tam_mbr == 0) {
+            fclose(arq);
+            if (i != dir->tam - 1) {
+                i++;
+                arq = fopen(dir->mbrs[i]->nome, "r");
+                tam_mbr = dir->mbrs[i]->tam;
+            }
+            else {
+                status = FALSE;
+            }
+        }
     }
     fclose(dir->archive);
 

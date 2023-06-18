@@ -7,4 +7,4 @@ run: vina
 	./vina
 
 clean:
-	rm vina
+	rm vina archive.vpp
