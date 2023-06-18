@@ -23,11 +23,12 @@ struct membro {
 struct diretorio {
     FILE *archive;
     unsigned long tam;
+    unsigned long tam_max;
     unsigned long prox_posi;
     struct membro **mbrs;
 };
 
-void falta_de_memoria()
+void falta_memoria()
 {
     fprintf(stderr, "Erro: Falta de memoria.\n");
     exit(1);
@@ -38,16 +39,19 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
     dir->archive = fopen(arc, "w");
     dir->mbrs = malloc(sizeof(struct membro *) * QNT_MBRS);
     dir->tam = 0;
+    dir->tam_max = QNT_MBRS;
     dir->prox_posi = 9;
 }
 
 void ler_archive(struct diretorio *dir)
 {
     unsigned long posiDir;
-    fscanf(dir->archive, "%ld", &posiDir);
+    fread(&posiDir, sizeof(unsigned long), 1, dir->archive);
     fseek(dir->archive, posiDir, SEEK_SET);
-    fscanf(dir->archive, "%ld", &dir->tam);
-    dir->mbrs = malloc(sizeof(struct membro*) * dir->tam);
+    fread(&dir->tam, sizeof(unsigned long), 1, dir->archive);
+    fread(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
+    fread(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+    dir->mbrs = malloc(sizeof(struct membro*) * dir->tam_max);
 
     for (unsigned long i = 0; i < dir->tam; i++)
         fread(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
@@ -57,7 +61,7 @@ struct diretorio *inicia_diretorio(char *archive)
 {
     struct diretorio *dir = malloc(sizeof(struct diretorio));
     if (dir == NULL)
-        falta_de_memoria();
+        falta_memoria();
     dir->archive = fopen(archive, "r+");
     if (dir->archive == NULL)
         cria_novo_dir(dir, archive);
@@ -77,6 +81,12 @@ void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long
     mem->ult_mod = props.st_mtim;
 }
 
+void aumenta_tam_dir(struct diretorio *dir)
+{
+    dir->tam_max += QNT_MBRS;
+    dir->mbrs = realloc(dir->mbrs, sizeof(struct membro *) * dir->tam_max);
+}
+
 int add_membro(char *nome, struct diretorio *dir)
 {
     struct stat propriedades;
@@ -85,9 +95,12 @@ int add_membro(char *nome, struct diretorio *dir)
         return 1;
     struct membro *mem = malloc(sizeof(struct membro));
     if (mem == NULL)
-        falta_de_memoria();
+        falta_memoria();
 
     pega_props(nome, mem, propriedades, dir->prox_posi);
+
+    if (dir->tam == dir->tam_max)
+        aumenta_tam_dir(dir);
 
     dir->mbrs[dir->tam] = mem;
     dir->prox_posi += propriedades.st_size;
@@ -114,6 +127,7 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
 void escreve_dir(struct diretorio *dir)
 {
     fwrite(&dir->tam, sizeof(unsigned long), 1, dir->archive);
+    fwrite(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
     fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
     for(unsigned long i = 0; i < dir->tam; i++)
         fwrite(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
