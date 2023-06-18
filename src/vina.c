@@ -87,7 +87,7 @@ int add_membro(char *nome, struct diretorio *dir)
     if (mem == NULL)
         falta_de_memoria();
 
-    pega_props(nome, mem, propriedades, ftell(dir->archive));
+    pega_props(nome, mem, propriedades, dir->prox_posi);
 
     dir->mbrs[dir->tam] = mem;
     dir->prox_posi += propriedades.st_size;
@@ -111,21 +111,21 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
     return aux;
 }
 
-int monta_archive(struct diretorio *dir)
+void escreve_dir(struct diretorio *dir)
 {
-    if (dir->tam == 0) {
-        fprintf(stderr, "Nenhum arquivo a ser arquivado.\n");
-        return 1;
-    }
-    FILE *arq;
-    short status = TRUE;
-    unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
-    unsigned long posi_dir, limite_buffer, tam_mbr, i = 0; 
-    posi_dir = ftell(dir->archive);
-    fwrite(&posi_dir, sizeof(unsigned long), 1, dir->archive);
+    fwrite(&dir->tam, sizeof(unsigned long), 1, dir->archive);
+    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+    for(unsigned long i = 0; i < dir->tam; i++)
+        fwrite(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
+}
 
-    arq = fopen(dir->mbrs[i]->nome, "r");
+void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write)
+{
+    unsigned long tam_mbr, limite_buffer, i = 0;
+    FILE *arq = fopen(dir->mbrs[i]->nome, "r");
+    short status = TRUE;
     tam_mbr = dir->mbrs[i]->tam;
+
     while (status) {
         limite_buffer = le_dados_membro(&tam_mbr, buffer_write, arq);
         fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
@@ -141,6 +141,20 @@ int monta_archive(struct diretorio *dir)
             }
         }
     }
+}
+
+int monta_archive(struct diretorio *dir)
+{
+    if (dir->tam == 0) {
+        fprintf(stderr, "Nenhum arquivo a ser arquivado.\n");
+        return 1;
+    }
+    unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
+
+    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+    escreve_dados_mbrs(dir, buffer_write);
+    escreve_dir(dir);
+
     fclose(dir->archive);
 
     return 0;
