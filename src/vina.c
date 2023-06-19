@@ -40,7 +40,7 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
     dir->mbrs = malloc(sizeof(struct membro *) * QNT_MBRS);
     dir->tam = 0;
     dir->tam_max = QNT_MBRS;
-    dir->prox_posi = 9;
+    dir->prox_posi = 8;
 }
 
 void ler_archive(struct diretorio *dir)
@@ -48,9 +48,11 @@ void ler_archive(struct diretorio *dir)
     unsigned long posiDir;
     fread(&posiDir, sizeof(unsigned long), 1, dir->archive);
     fseek(dir->archive, posiDir, SEEK_SET);
+
+    dir->prox_posi = posiDir;
     fread(&dir->tam, sizeof(unsigned long), 1, dir->archive);
     fread(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
-    fread(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+
     dir->mbrs = malloc(sizeof(struct membro*) * dir->tam_max);
 
     for (unsigned long i = 0; i < dir->tam; i++)
@@ -126,9 +128,10 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
 
 void escreve_dir(struct diretorio *dir)
 {
+
     fwrite(&dir->tam, sizeof(unsigned long), 1, dir->archive);
     fwrite(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
-    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+
     for(unsigned long i = 0; i < dir->tam; i++)
         fwrite(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
 }
@@ -164,21 +167,56 @@ int monta_archive(struct diretorio *dir)
         return 1;
     }
     unsigned char *buffer_write = malloc(sizeof(unsigned char) * TAM_BUFFER);
-
+    if (buffer_write == NULL) {
+        fprintf (stderr, "Espaco insuficiente para buffer.\n");
+        return 1;
+    }
     fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+
     escreve_dados_mbrs(dir, buffer_write);
     escreve_dir(dir);
-
     fclose(dir->archive);
 
     return 0;
 }
 
+void imprime_permissoes(struct membro *mbr)
+{
+    char perms[] = "rwxrwxrwx";
+    for (short i = 0; i < 9; i++) {
+        perms[i] = (mbr->permissoes & (1 << (8-i))) ? perms[i] : '-';
+    }
+    printf ("%s ", perms);
+}
+
+void imprime_data(struct membro *mbr)
+{
+    char data_fmt[20];
+    strftime(data_fmt, 20, "%Y-%m-%d %H:%M", localtime(&mbr->ult_mod.tv_sec));
+    printf ("%s ", data_fmt);
+}
+
+void mostra_propriedades(struct diretorio *dir)
+{
+    struct membro *mbr;
+    unsigned long i = 0;
+    while (i < dir->tam) {
+        mbr = dir->mbrs[i];
+        imprime_permissoes(mbr);
+        printf ("%d ", mbr->uid);
+        printf ("%ld ", mbr->tam);
+        imprime_data(mbr);
+        printf ("%s\n", mbr->nome);
+        i++;
+    }
+}
+
 int main()
 {
     struct diretorio *dir = inicia_diretorio("archive.vpp");
-    add_membro("todo.txt", dir);
-    add_membro("makefile", dir);
+    /* add_membro("todo.txt", dir); */
+    /* add_membro("makefile", dir); */
+    mostra_propriedades(dir);
     monta_archive(dir);
 
     return 0;
