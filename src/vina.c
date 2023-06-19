@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <pwd.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <sys/types.h>
@@ -12,12 +14,13 @@
 
 struct membro {
     char *nome;
+    unsigned int tam_nome;
     unsigned long comeco_dados;
     unsigned long posicao;
     uid_t uid;
     off_t tam;
     mode_t permissoes;
-    struct timespec ult_mod;
+    time_t ult_mod;
 };
 
 struct diretorio {
@@ -46,6 +49,7 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
 void ler_archive(struct diretorio *dir)
 {
     unsigned long posiDir;
+    struct membro *aux;
     fread(&posiDir, sizeof(unsigned long), 1, dir->archive);
     fseek(dir->archive, posiDir, SEEK_SET);
 
@@ -55,8 +59,20 @@ void ler_archive(struct diretorio *dir)
 
     dir->mbrs = malloc(sizeof(struct membro*) * dir->tam_max);
 
-    for (unsigned long i = 0; i < dir->tam; i++)
-        fread(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
+    for(unsigned long i = 0; i < dir->tam; i++) {
+        aux = malloc(sizeof(struct membro));
+        fread(&aux->tam_nome, sizeof(unsigned int), 1, dir->archive);
+        aux->nome = malloc(sizeof(char) * (aux->tam_nome + 1));
+        fread(aux->nome, sizeof(char), aux->tam_nome, dir->archive);
+        aux->nome[aux->tam_nome] = '\0';
+        fread(&aux->comeco_dados, sizeof(unsigned long), 1, dir->archive);
+        fread(&aux->posicao, sizeof(unsigned long), 1, dir->archive);
+        fread(&aux->uid, sizeof(uid_t), 1, dir->archive);
+        fread(&aux->tam, sizeof(off_t), 1, dir->archive);
+        fread(&aux->permissoes, sizeof(mode_t), 1, dir->archive);
+        fread(&aux->ult_mod, sizeof(time_t), 1, dir->archive);
+        dir->mbrs[i] = aux;
+    }
 }
 
 struct diretorio *inicia_diretorio(char *archive)
@@ -76,11 +92,12 @@ struct diretorio *inicia_diretorio(char *archive)
 void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long tam)
 {
     mem->nome = nome;
+    mem->tam_nome = strlen(nome);
     mem->comeco_dados = tam;
     mem->uid = props.st_uid;
     mem->tam = props.st_size;
     mem->permissoes = props.st_mode;
-    mem->ult_mod = props.st_mtim;
+    mem->ult_mod = props.st_mtim.tv_sec;
 }
 
 void aumenta_tam_dir(struct diretorio *dir)
@@ -128,12 +145,20 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
 
 void escreve_dir(struct diretorio *dir)
 {
-
+    struct membro *mbr;
     fwrite(&dir->tam, sizeof(unsigned long), 1, dir->archive);
     fwrite(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
-
-    for(unsigned long i = 0; i < dir->tam; i++)
-        fwrite(dir->mbrs[i], sizeof(struct membro), 1, dir->archive);
+    for(unsigned long i = 0; i < dir->tam; i++) {
+        mbr = dir->mbrs[i];
+        fwrite(&mbr->tam_nome, sizeof(unsigned int), 1, dir->archive);
+        fprintf(dir->archive, "%s", mbr->nome);
+        fwrite(&mbr->comeco_dados, sizeof(unsigned long), 1, dir->archive);
+        fwrite(&mbr->posicao, sizeof(unsigned long), 1, dir->archive);
+        fwrite(&mbr->uid, sizeof(uid_t), 1, dir->archive);
+        fwrite(&mbr->tam, sizeof(off_t), 1, dir->archive);
+        fwrite(&mbr->permissoes, sizeof(mode_t), 1, dir->archive);
+        fwrite(&mbr->ult_mod, sizeof(time_t), 1, dir->archive);
+    }
 }
 
 void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write)
@@ -180,19 +205,34 @@ int monta_archive(struct diretorio *dir)
     return 0;
 }
 
+char tipo_arquivo(int perms)
+{
+    switch (perms & S_IFMT) {
+        case S_IFBLK: return 'b';
+        case S_IFCHR: return 'c';
+        case S_IFDIR: return 'd';
+        case S_IFIFO: return 'p';
+        case S_IFLNK: return 'l';
+        case S_IFREG: return '-';
+        case S_IFSOCK: return 's';
+        default: return '-';
+    }
+}
+
 void imprime_permissoes(struct membro *mbr)
 {
-    char perms[] = "rwxrwxrwx";
-    for (short i = 0; i < 9; i++) {
-        perms[i] = (mbr->permissoes & (1 << (8-i))) ? perms[i] : '-';
-    }
+    char perms[] = "-rwxrwxrwx";
+    perms[0] = tipo_arquivo(mbr->permissoes);
+    for (short i = 1; i < 10; i++)
+        perms[i] = (mbr->permissoes & (1 << (9-i))) ? perms[i] : '-';
+
     printf ("%s ", perms);
 }
 
 void imprime_data(struct membro *mbr)
 {
     char data_fmt[20];
-    strftime(data_fmt, 20, "%Y-%m-%d %H:%M", localtime(&mbr->ult_mod.tv_sec));
+    strftime(data_fmt, 20, "%Y-%m-%d %H:%M", localtime(&mbr->ult_mod));
     printf ("%s ", data_fmt);
 }
 
@@ -203,7 +243,7 @@ void mostra_propriedades(struct diretorio *dir)
     while (i < dir->tam) {
         mbr = dir->mbrs[i];
         imprime_permissoes(mbr);
-        printf ("%d ", mbr->uid);
+        printf ("%s ", getpwuid(mbr->uid)->pw_name);
         printf ("%ld ", mbr->tam);
         imprime_data(mbr);
         printf ("%s\n", mbr->nome);
@@ -213,11 +253,13 @@ void mostra_propriedades(struct diretorio *dir)
 
 int main()
 {
-    struct diretorio *dir = inicia_diretorio("archive.vpp");
+    struct diretorio *dir;
+    dir = inicia_diretorio("archive.vpp");
     /* add_membro("todo.txt", dir); */
     /* add_membro("makefile", dir); */
+    /* add_membro("LEIAME", dir); */
     mostra_propriedades(dir);
-    monta_archive(dir);
+    /* monta_archive(dir); */
 
     return 0;
 }
