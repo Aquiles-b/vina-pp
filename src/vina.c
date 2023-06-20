@@ -1,35 +1,4 @@
-#include <stdio.h>
-#include <pwd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <time.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#define TAM_BUFFER 1024
-#define QNT_MBRS 8
-#define TRUE 1
-#define FALSE 0
-
-struct membro {
-    char *nome;
-    unsigned int tam_nome;
-    unsigned long comeco_dados;
-    unsigned long posicao;
-    uid_t uid;
-    off_t tam;
-    mode_t permissoes;
-    time_t ult_mod;
-};
-
-struct diretorio {
-    FILE *archive;
-    unsigned long tam;
-    unsigned long tam_max;
-    unsigned long prox_posi;
-    struct membro **mbrs;
-};
+#include "vina.h"
 
 void falta_memoria()
 {
@@ -251,15 +220,32 @@ void mostra_propriedades(struct diretorio *dir)
     }
 }
 
-int main()
+void extrai_membros(struct diretorio *dir)
 {
-    struct diretorio *dir;
-    dir = inicia_diretorio("archive.vpp");
-    /* add_membro("todo.txt", dir); */
-    /* add_membro("makefile", dir); */
-    /* add_membro("LEIAME", dir); */
-    mostra_propriedades(dir);
-    /* monta_archive(dir); */
+    if (dir->tam == 0)
+        return;
+    FILE *arq;
+    unsigned long tam_mbr, limite_buffer, i = 0;
+    short status = TRUE;
+    unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
 
-    return 0;
+    arq = fopen(dir->mbrs[i]->nome, "w");
+    fseek(dir->archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
+    tam_mbr = dir->mbrs[i]->tam;
+    while (status) {
+        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, dir->archive);
+        fwrite(buffer_w, sizeof(unsigned char), limite_buffer, arq);
+        if (tam_mbr == 0) {
+            fclose(arq);
+            if (i != dir->tam - 1) {
+                i++;
+                arq = fopen(dir->mbrs[i]->nome, "w");
+                tam_mbr = dir->mbrs[i]->tam;
+                fseek(dir->archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
+            }
+            else {
+                status = FALSE;
+            }
+        }
+    }
 }

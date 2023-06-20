@@ -1,10 +1,13 @@
 CFLAGS = -Wall -g
 
-vina: src/vina.c
-	gcc src/vina.c -o $@ $(CFLAGS)
+main: src/main.c src/vina.o src/vina.h
+	gcc src/main.c -o main src/vina.o $(CFLAGS)
 
-run: vina
-	./vina
+vina.o: src/vina.c src/vina.h
+	gcc -c src/vina.c $(CFLAGS)
+
+run: main
+	./main
 
 clean:
-	rm vina archive.vpp
+	rm src/*.o main  
