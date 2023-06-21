@@ -26,13 +26,26 @@ void extrai_arquivos(int argc, char *argv[])
     }
 }
 
+void mostra_dados(char *archive)
+{
+    struct diretorio *dir = inicia_diretorio(archive);
+    if (dir->tam == 0)
+        return;
+    mostra_propriedades(dir);
+}
+
 int main(int argc, char *argv[])
 {
     int option;
-    while((option = getopt(argc, argv, "ie")) != -1) {
+    while((option = getopt(argc, argv, "iamxrch")) != -1) {
         switch (option) {
             case 'i': insere_arquivos(argc, argv); break;
-            case 'e': extrai_arquivos(argc, argv); break;
+            case 'a': printf("Atualiza para mais recente...\n"); break;
+            case 'm': printf("Move para depois do target...\n"); break;
+            case 'x': extrai_arquivos(argc, argv); break;
+            case 'r': printf("Removendo arquivos...\n");; break;
+            case 'c': mostra_dados(argv[2]); break;
+            case 'h': printf("Ajuda...\n"); break;
             default: printf("...\n"); break;
         }
     }

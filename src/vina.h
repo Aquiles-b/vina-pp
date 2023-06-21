@@ -27,7 +27,7 @@ struct membro {
 };
 
 struct diretorio {
-    FILE *archive;
+    char *archive;
     unsigned long tam;
     unsigned long tam_max;
     unsigned long prox_posi;

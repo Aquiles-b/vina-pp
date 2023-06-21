@@ -1,4 +1,5 @@
 #include "vina.h"
+#include <stdio.h>
 #include <string.h>
 
 void falta_memoria()
@@ -9,38 +10,38 @@ void falta_memoria()
 
 void cria_novo_dir(struct diretorio *dir, char *arc)
 {
-    dir->archive = fopen(arc, "w");
+    dir->archive = arc;
     dir->mbrs = malloc(sizeof(struct membro *) * QNT_MBRS);
     dir->tam = 0;
     dir->tam_max = QNT_MBRS;
     dir->prox_posi = 8;
 }
 
-void ler_archive(struct diretorio *dir)
+void ler_archive(struct diretorio *dir, FILE *archive)
 {
     unsigned long posiDir;
     struct membro *aux;
-    fread(&posiDir, sizeof(unsigned long), 1, dir->archive);
-    fseek(dir->archive, posiDir, SEEK_SET);
+    fread(&posiDir, sizeof(unsigned long), 1, archive);
+    fseek(archive, posiDir, SEEK_SET);
 
     dir->prox_posi = posiDir;
-    fread(&dir->tam, sizeof(unsigned long), 1, dir->archive);
-    fread(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
+    fread(&dir->tam, sizeof(unsigned long), 1, archive);
+    fread(&dir->tam_max, sizeof(unsigned long), 1, archive);
 
     dir->mbrs = malloc(sizeof(struct membro*) * dir->tam_max);
 
     for(unsigned long i = 0; i < dir->tam; i++) {
         aux = malloc(sizeof(struct membro));
-        fread(&aux->tam_nome, sizeof(unsigned int), 1, dir->archive);
+        fread(&aux->tam_nome, sizeof(unsigned int), 1, archive);
         aux->nome = malloc(sizeof(char) * (aux->tam_nome + 1));
-        fread(aux->nome, sizeof(char), aux->tam_nome, dir->archive);
+        fread(aux->nome, sizeof(char), aux->tam_nome, archive);
         aux->nome[aux->tam_nome] = '\0';
-        fread(&aux->comeco_dados, sizeof(unsigned long), 1, dir->archive);
-        fread(&aux->posicao, sizeof(unsigned long), 1, dir->archive);
-        fread(&aux->uid, sizeof(uid_t), 1, dir->archive);
-        fread(&aux->tam, sizeof(off_t), 1, dir->archive);
-        fread(&aux->permissoes, sizeof(mode_t), 1, dir->archive);
-        fread(&aux->ult_mod, sizeof(time_t), 1, dir->archive);
+        fread(&aux->comeco_dados, sizeof(unsigned long), 1, archive);
+        fread(&aux->posicao, sizeof(unsigned long), 1, archive);
+        fread(&aux->uid, sizeof(uid_t), 1, archive);
+        fread(&aux->tam, sizeof(off_t), 1, archive);
+        fread(&aux->permissoes, sizeof(mode_t), 1, archive);
+        fread(&aux->ult_mod, sizeof(time_t), 1, archive);
         dir->mbrs[i] = aux;
     }
 }
@@ -50,11 +51,11 @@ struct diretorio *inicia_diretorio(char *archive)
     struct diretorio *dir = malloc(sizeof(struct diretorio));
     if (dir == NULL)
         falta_memoria();
-    dir->archive = fopen(archive, "r+");
-    if (dir->archive == NULL)
+    FILE *arc = fopen(archive, "r");
+    if (arc == NULL)
         cria_novo_dir(dir, archive);
     else
-        ler_archive(dir);
+        ler_archive(dir, arc);
 
     return dir;
 }
@@ -113,25 +114,26 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
     return aux;
 }
 
-void escreve_dir(struct diretorio *dir)
+void escreve_dir(struct diretorio *dir, FILE *archive)
 {
     struct membro *mbr;
-    fwrite(&dir->tam, sizeof(unsigned long), 1, dir->archive);
-    fwrite(&dir->tam_max, sizeof(unsigned long), 1, dir->archive);
+
+    fwrite(&dir->tam, sizeof(unsigned long), 1, archive);
+    fwrite(&dir->tam_max, sizeof(unsigned long), 1, archive);
     for(unsigned long i = 0; i < dir->tam; i++) {
         mbr = dir->mbrs[i];
-        fwrite(&mbr->tam_nome, sizeof(unsigned int), 1, dir->archive);
-        fprintf(dir->archive, "%s", mbr->nome);
-        fwrite(&mbr->comeco_dados, sizeof(unsigned long), 1, dir->archive);
-        fwrite(&mbr->posicao, sizeof(unsigned long), 1, dir->archive);
-        fwrite(&mbr->uid, sizeof(uid_t), 1, dir->archive);
-        fwrite(&mbr->tam, sizeof(off_t), 1, dir->archive);
-        fwrite(&mbr->permissoes, sizeof(mode_t), 1, dir->archive);
-        fwrite(&mbr->ult_mod, sizeof(time_t), 1, dir->archive);
+        fwrite(&mbr->tam_nome, sizeof(unsigned int), 1, archive);
+        fprintf(archive, "%s", mbr->nome);
+        fwrite(&mbr->comeco_dados, sizeof(unsigned long), 1, archive);
+        fwrite(&mbr->posicao, sizeof(unsigned long), 1, archive);
+        fwrite(&mbr->uid, sizeof(uid_t), 1, archive);
+        fwrite(&mbr->tam, sizeof(off_t), 1, archive);
+        fwrite(&mbr->permissoes, sizeof(mode_t), 1, archive);
+        fwrite(&mbr->ult_mod, sizeof(time_t), 1, archive);
     }
 }
 
-void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write)
+void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write, FILE *archive)
 {
     unsigned long tam_mbr, limite_buffer, i = 0;
     FILE *arq = fopen(dir->mbrs[i]->nome, "r");
@@ -140,7 +142,7 @@ void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write)
 
     while (status) {
         limite_buffer = le_dados_membro(&tam_mbr, buffer_write, arq);
-        fwrite(buffer_write, sizeof(unsigned char), limite_buffer, dir->archive);
+        fwrite(buffer_write, sizeof(unsigned char), limite_buffer, archive);
         if (tam_mbr == 0) {
             fclose(arq);
             if (i != dir->tam - 1) {
@@ -166,11 +168,12 @@ int monta_archive(struct diretorio *dir)
         fprintf (stderr, "Espaco insuficiente para buffer.\n");
         return 1;
     }
-    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, dir->archive);
+    FILE *archive = fopen(dir->archive, "w");
+    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, archive);
 
-    escreve_dados_mbrs(dir, buffer_write);
-    escreve_dir(dir);
-    fclose(dir->archive);
+    escreve_dados_mbrs(dir, buffer_write, archive);
+    escreve_dir(dir, archive);
+    fclose(archive);
 
     return 0;
 }
@@ -226,6 +229,7 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
     if (dir->tam == 0)
         return 1;
     FILE *arq = NULL;
+    FILE *archive = fopen(dir->archive, "r");
     unsigned long tam_mbr, limite_buffer, ind_mbr, j = 0;
     short status = TRUE;
     unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
@@ -240,10 +244,10 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
     }
     if (arq == NULL)
         return 1;
-    fseek(dir->archive, dir->mbrs[ind_mbr]->comeco_dados, SEEK_SET);
+    fseek(archive, dir->mbrs[ind_mbr]->comeco_dados, SEEK_SET);
     tam_mbr = dir->mbrs[ind_mbr]->tam;
     while (status) {
-        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, dir->archive);
+        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, archive);
         fwrite(buffer_w, sizeof(unsigned char), limite_buffer, arq);
         if (tam_mbr == 0) {
             fclose(arq);
@@ -258,15 +262,16 @@ void extrai_todos_membros(struct diretorio *dir)
     if (dir->tam == 0)
         return;
     FILE *arq;
+    FILE *archive = fopen(dir->archive, "w");
     unsigned long tam_mbr, limite_buffer, i = 0;
     short status = TRUE;
     unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
 
     arq = fopen(dir->mbrs[i]->nome, "w");
-    fseek(dir->archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
+    fseek(archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
     tam_mbr = dir->mbrs[i]->tam;
     while (status) {
-        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, dir->archive);
+        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, archive);
         fwrite(buffer_w, sizeof(unsigned char), limite_buffer, arq);
         if (tam_mbr == 0) {
             fclose(arq);
@@ -274,7 +279,7 @@ void extrai_todos_membros(struct diretorio *dir)
                 i++;
                 arq = fopen(dir->mbrs[i]->nome, "w");
                 tam_mbr = dir->mbrs[i]->tam;
-                fseek(dir->archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
+                fseek(archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
             }
             else {
                 status = FALSE;
