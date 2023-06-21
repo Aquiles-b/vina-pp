@@ -1,4 +1,5 @@
 #include "vina.h"
+#include <string.h>
 
 void falta_memoria()
 {
@@ -220,7 +221,39 @@ void mostra_propriedades(struct diretorio *dir)
     }
 }
 
-void extrai_membros(struct diretorio *dir)
+int extrai_membro(struct diretorio *dir, char *nome_mbr)
+{
+    if (dir->tam == 0)
+        return 1;
+    FILE *arq = NULL;
+    unsigned long tam_mbr, limite_buffer, ind_mbr, j = 0;
+    short status = TRUE;
+    unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
+
+    while (j < dir->tam) {
+        if (!strcmp(nome_mbr, dir->mbrs[j]->nome)) {
+            arq = fopen(dir->mbrs[j]->nome, "w");
+            ind_mbr = j;
+            j = dir->tam;
+        }
+        j++;
+    }
+    if (arq == NULL)
+        return 1;
+    fseek(dir->archive, dir->mbrs[ind_mbr]->comeco_dados, SEEK_SET);
+    tam_mbr = dir->mbrs[ind_mbr]->tam;
+    while (status) {
+        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, dir->archive);
+        fwrite(buffer_w, sizeof(unsigned char), limite_buffer, arq);
+        if (tam_mbr == 0) {
+            fclose(arq);
+            status = FALSE;
+        }
+    }
+    return 0;
+}
+
+void extrai_todos_membros(struct diretorio *dir)
 {
     if (dir->tam == 0)
         return;
