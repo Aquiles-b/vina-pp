@@ -287,3 +287,24 @@ void extrai_todos_membros(struct diretorio *dir)
         }
     }
 }
+
+int remove_membro(struct diretorio *dir, char *nome_mbr)
+{
+    long int ind_mbr = -1, i = 0;
+    while (i < dir->tam && ind_mbr == -1) {
+        if (!strcmp(nome_mbr, dir->mbrs[i]->nome))
+            ind_mbr = i;
+        i++;
+    }
+    if (ind_mbr == -1)
+        return 1;
+
+    for (unsigned int j = ind_mbr; j < dir->tam - 1; j++) {
+        dir->mbrs[j] = dir->mbrs[j + 1];
+        dir->mbrs[j + 1]->posicao--;
+    }
+    dir->tam--;
+    dir->mbrs[dir->tam] = NULL;
+    
+    return 0;
+}
