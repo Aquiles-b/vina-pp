@@ -1,6 +1,8 @@
 #include "vina.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 void falta_memoria()
 {
@@ -10,7 +12,6 @@ void falta_memoria()
 
 void cria_novo_dir(struct diretorio *dir, char *arc)
 {
-    dir->archive = arc;
     dir->mbrs = malloc(sizeof(struct membro *) * QNT_MBRS);
     dir->tam = 0;
     dir->tam_max = QNT_MBRS;
@@ -19,12 +20,12 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
 
 void ler_archive(struct diretorio *dir, FILE *archive)
 {
-    unsigned long posiDir;
+    unsigned long posi_dir;
     struct membro *aux;
-    fread(&posiDir, sizeof(unsigned long), 1, archive);
-    fseek(archive, posiDir, SEEK_SET);
+    fread(&posi_dir, sizeof(unsigned long), 1, archive);
+    fseek(archive, posi_dir, SEEK_SET);
 
-    dir->prox_posi = posiDir;
+    dir->prox_posi = posi_dir;
     fread(&dir->tam, sizeof(unsigned long), 1, archive);
     fread(&dir->tam_max, sizeof(unsigned long), 1, archive);
 
@@ -44,6 +45,7 @@ void ler_archive(struct diretorio *dir, FILE *archive)
         fread(&aux->ult_mod, sizeof(time_t), 1, archive);
         dir->mbrs[i] = aux;
     }
+    fclose(archive);
 }
 
 struct diretorio *inicia_diretorio(char *archive)
@@ -52,6 +54,7 @@ struct diretorio *inicia_diretorio(char *archive)
     if (dir == NULL)
         falta_memoria();
     FILE *arc = fopen(archive, "r");
+    dir->archive = archive;
     if (arc == NULL)
         cria_novo_dir(dir, archive);
     else
@@ -95,6 +98,7 @@ int add_membro(char *nome, struct diretorio *dir)
     dir->mbrs[dir->tam] = mem;
     dir->prox_posi += propriedades.st_size;
     dir->tam++;
+    mem->posicao = dir->tam;
 
     return 0;
 }
@@ -114,7 +118,7 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
     return aux;
 }
 
-void escreve_dir(struct diretorio *dir, FILE *archive)
+unsigned long int escreve_dir(struct diretorio *dir, FILE *archive)
 {
     struct membro *mbr;
 
@@ -131,6 +135,8 @@ void escreve_dir(struct diretorio *dir, FILE *archive)
         fwrite(&mbr->permissoes, sizeof(mode_t), 1, archive);
         fwrite(&mbr->ult_mod, sizeof(time_t), 1, archive);
     }
+
+    return ftell(archive);
 }
 
 void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write, FILE *archive)
@@ -219,7 +225,8 @@ void mostra_propriedades(struct diretorio *dir)
         printf ("%s ", getpwuid(mbr->uid)->pw_name);
         printf ("%ld ", mbr->tam);
         imprime_data(mbr);
-        printf ("%s\n", mbr->nome);
+        printf ("%s ", mbr->nome);
+        printf ("posicao %ld\n", mbr->posicao);
         i++;
     }
 }
@@ -307,4 +314,52 @@ int remove_membro(struct diretorio *dir, char *nome_mbr)
     dir->mbrs[dir->tam] = NULL;
     
     return 0;
+}
+
+unsigned long int desfragmenta_archive(struct diretorio *dir, FILE *archive)
+{
+    unsigned long limite_buffer, posi_w, posi_r, tam_mbr, i = 0;
+    unsigned char *buf_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
+    struct membro *mbr = dir->mbrs[i];
+    tam_mbr = mbr->tam;
+    short status = TRUE;
+
+    posi_w = 8;
+    posi_r = mbr->comeco_dados;
+    while (status) {
+        fseek(archive, posi_r, SEEK_SET);
+        limite_buffer = le_dados_membro(&tam_mbr, buf_w, archive);
+        posi_r += limite_buffer;
+        fseek(archive, posi_w, SEEK_SET);
+        posi_w += limite_buffer;
+        fwrite(buf_w, sizeof(unsigned char), limite_buffer, archive);
+        if (tam_mbr == 0) {
+            if (i != dir->tam - 1) {
+                i++;
+                mbr = dir->mbrs[i];
+                posi_r = mbr->comeco_dados;
+                tam_mbr = mbr->tam;
+            }
+            else {
+                status = FALSE;
+            }
+        }
+    }
+    return posi_w;
+}
+
+void remonta_archive(struct diretorio *dir)
+{
+    unsigned long int posi_final;
+    FILE *archive = fopen(dir->archive, "r+");
+    if (archive == NULL) {
+        fprintf (stderr, "Nao foi possivel ler %s\n", dir->archive);
+        return;
+    }
+    dir->prox_posi = desfragmenta_archive(dir, archive);
+    posi_final = escreve_dir(dir, archive);
+    rewind(archive);
+    fwrite(&dir->prox_posi, sizeof(unsigned long), 1, archive);
+    fclose(archive);
+    truncate(dir->archive, posi_final);
 }

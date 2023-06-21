@@ -26,12 +26,19 @@ void extrai_arquivos(int argc, char *argv[])
     }
 }
 
-void mostra_dados(char *archive)
+void mostra_metadados(char *archive)
 {
     struct diretorio *dir = inicia_diretorio(archive);
     if (dir->tam == 0)
         return;
     mostra_propriedades(dir);
+}
+
+void apaga_arquivos(char *argv[])
+{
+    struct diretorio *dir = inicia_diretorio(argv[2]);
+    remove_membro(dir, argv[3]);
+    remonta_archive(dir);
 }
 
 int main(int argc, char *argv[])
@@ -43,8 +50,8 @@ int main(int argc, char *argv[])
             case 'a': printf("Atualiza para mais recente...\n"); break;
             case 'm': printf("Move para depois do target...\n"); break;
             case 'x': extrai_arquivos(argc, argv); break;
-            case 'r': printf("Removendo arquivos...\n");; break;
-            case 'c': mostra_dados(argv[2]); break;
+            case 'r': apaga_arquivos(argv); break;
+            case 'c': mostra_metadados(argv[2]); break;
             case 'h': printf("Ajuda...\n"); break;
             default: printf("...\n"); break;
         }

@@ -46,4 +46,8 @@ void extrai_todos_membros(struct diretorio *dir);
 
 int extrai_membro(struct diretorio *dir, char *nome_mbr);
 
+int remove_membro(struct diretorio *dir, char *nome_mbr);
+
+void remonta_archive(struct diretorio *dir);
+
 #endif // _H_VINA
