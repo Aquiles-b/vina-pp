@@ -14,6 +14,8 @@
 #define QNT_MBRS 8
 #define TRUE 1
 #define FALSE 0
+#define ATUALIZA 0
+#define SUBSTITUI 1
 
 struct membro {
     char *nome;
@@ -36,7 +38,7 @@ struct diretorio {
 
 struct diretorio *inicia_diretorio(char *archive);
 
-int add_membro(char *nome, struct diretorio *dir);
+int add_membro(char *nome, struct diretorio *dir, short tipo);
 
 int monta_archive(struct diretorio *dir);
 

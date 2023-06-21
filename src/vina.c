@@ -80,9 +80,22 @@ void aumenta_tam_dir(struct diretorio *dir)
     dir->mbrs = realloc(dir->mbrs, sizeof(struct membro *) * dir->tam_max);
 }
 
-int add_membro(char *nome, struct diretorio *dir)
+unsigned long membro_existe(struct diretorio *dir, char *nome)
+{
+    unsigned long i = 0, ind_mbr = -1;
+    while (ind_mbr == -1 && i < dir->tam) {
+        if (!strcmp(nome, dir->mbrs[i]->nome))
+            ind_mbr = i;
+        i++;
+    }
+
+    return ind_mbr;
+}
+
+int add_membro(char *nome, struct diretorio *dir, short tipo)
 {
     struct stat propriedades;
+    unsigned long ind_mbr;
     int ok = stat(nome, &propriedades);
     if (ok)
         return 1;
@@ -91,7 +104,15 @@ int add_membro(char *nome, struct diretorio *dir)
         falta_memoria();
 
     pega_props(nome, mem, propriedades, dir->prox_posi);
-
+    ind_mbr = membro_existe(dir, nome);
+    if (ind_mbr != -1) {
+        if (tipo == ATUALIZA) {
+            if (dir->mbrs[ind_mbr]->ult_mod >= mem->ult_mod)
+                return 0;
+        }
+        remove_membro(dir, mem->nome);
+        remonta_archive(dir);
+    }
     if (dir->tam == dir->tam_max)
         aumenta_tam_dir(dir);
 
@@ -237,20 +258,15 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
         return 1;
     FILE *arq = NULL;
     FILE *archive = fopen(dir->archive, "r");
-    unsigned long tam_mbr, limite_buffer, ind_mbr, j = 0;
+    unsigned long tam_mbr, limite_buffer, ind_mbr;
     short status = TRUE;
     unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
 
-    while (j < dir->tam) {
-        if (!strcmp(nome_mbr, dir->mbrs[j]->nome)) {
-            arq = fopen(dir->mbrs[j]->nome, "w");
-            ind_mbr = j;
-            j = dir->tam;
-        }
-        j++;
-    }
-    if (arq == NULL)
+    ind_mbr = membro_existe(dir, nome_mbr);
+    if (ind_mbr == -1)
         return 1;
+
+    arq = fopen(dir->mbrs[ind_mbr]->nome, "w");
     fseek(archive, dir->mbrs[ind_mbr]->comeco_dados, SEEK_SET);
     tam_mbr = dir->mbrs[ind_mbr]->tam;
     while (status) {
@@ -297,12 +313,9 @@ void extrai_todos_membros(struct diretorio *dir)
 
 int remove_membro(struct diretorio *dir, char *nome_mbr)
 {
-    long int ind_mbr = -1, i = 0;
-    while (i < dir->tam && ind_mbr == -1) {
-        if (!strcmp(nome_mbr, dir->mbrs[i]->nome))
-            ind_mbr = i;
-        i++;
-    }
+    long int ind_mbr;
+
+    ind_mbr = membro_existe(dir, nome_mbr);
     if (ind_mbr == -1)
         return 1;
 

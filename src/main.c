@@ -2,11 +2,11 @@
 #include <getopt.h>
 #include "vina.h"
 
-void insere_arquivos(int argc, char *argv[])
+void insere_arquivos(int argc, char *argv[], short tipo)
 {
     struct diretorio *dir = inicia_diretorio(argv[2]);
     for (int i = 3; i < argc; i++) {
-        if (add_membro(argv[i], dir))
+        if (add_membro(argv[i], dir, tipo))
             fprintf (stderr, "Nao foi possivel ler %s\n", argv[i]);
     }
     monta_archive(dir);
@@ -46,8 +46,8 @@ int main(int argc, char *argv[])
     int option;
     while((option = getopt(argc, argv, "iamxrch")) != -1) {
         switch (option) {
-            case 'i': insere_arquivos(argc, argv); break;
-            case 'a': printf("Atualiza para mais recente...\n"); break;
+            case 'i': insere_arquivos(argc, argv, SUBSTITUI); break;
+            case 'a': insere_arquivos(argc, argv, ATUALIZA); break;
             case 'm': printf("Move para depois do target...\n"); break;
             case 'x': extrai_arquivos(argc, argv); break;
             case 'r': apaga_arquivos(argv); break;
