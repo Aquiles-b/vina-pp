@@ -243,12 +243,12 @@ void mostra_propriedades(struct diretorio *dir)
     unsigned long i = 0;
     while (i < dir->tam) {
         mbr = dir->mbrs[i];
+        printf ("%ldº: ", mbr->posicao);
         imprime_permissoes(mbr);
         printf ("%s ", getpwuid(mbr->uid)->pw_name);
         printf ("%ld ", mbr->tam);
         imprime_data(mbr);
-        printf ("%s ", mbr->nome);
-        printf ("posicao %ld\n", mbr->posicao);
+        printf ("%s\n", mbr->nome);
         i++;
     }
 }
