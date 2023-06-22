@@ -9,3 +9,5 @@ void mostra_metadados(char *archive);
 void apaga_arquivos(int argc, char *argv[]);
 
 void reposiciona_membro(char *argv[]);
+
+void imprime_ajuda();

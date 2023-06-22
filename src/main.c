@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
             case 'x': extrai_arquivos(argc, argv); break;
             case 'r': apaga_arquivos(argc, argv); break;
             case 'c': mostra_metadados(argv[2]); break;
-            case 'h': printf("Ajuda...\n"); break;
+            case 'h': imprime_ajuda(); break;
             default: fprintf (stderr, "Opção invalida.\n%s -h para mostrar opcoes.\n", argv[0]); break;
         }
     }
