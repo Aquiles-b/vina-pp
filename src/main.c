@@ -29,16 +29,40 @@ void extrai_arquivos(int argc, char *argv[])
 void mostra_metadados(char *archive)
 {
     struct diretorio *dir = inicia_diretorio(archive);
-    if (dir->tam == 0)
+    if (dir->tam == 0 || archive == NULL) {
+        fprintf (stderr, "Archive inexistente.\n");
         return;
+    }
     mostra_propriedades(dir);
 }
 
-void apaga_arquivos(char *argv[])
+void apaga_arquivos(int argc, char *argv[])
 {
     struct diretorio *dir = inicia_diretorio(argv[2]);
-    remove_membro(dir, argv[3]);
+    for (int i = 3; i < argc; i++){
+        if(remove_membro(dir, argv[i]))
+            fprintf (stderr, "Membro %s nao existe no archive\n", argv[i]);
+    }
     remonta_archive(dir);
+}
+
+void reposiciona_membro(char *argv[])
+{
+    struct diretorio *dir = inicia_diretorio(argv[3]);
+    if (dir->tam == 0) {
+        fprintf (stderr, "Archive vazio ou nao existente.\n");
+        return;
+    }
+
+    int status = move_membros(dir, argv[2], argv[4]);
+    if (status == 0)
+        return;
+    else if (status == -1)
+        fprintf (stderr, "Nao eh possivel permutar um membro com ele mesmo.\n");
+    else if (status == 1)
+        fprintf (stderr, "Alvo %s nao existe no archive.\n", argv[2]);
+    else if (status == 2)
+        fprintf (stderr, "Membro %s nao existe no archive.\n", argv[4]);
 }
 
 int main(int argc, char *argv[])
@@ -48,14 +72,13 @@ int main(int argc, char *argv[])
         switch (option) {
             case 'i': insere_arquivos(argc, argv, SUBSTITUI); break;
             case 'a': insere_arquivos(argc, argv, ATUALIZA); break;
-            case 'm': printf("Move para depois do target...\n"); break;
+            case 'm': reposiciona_membro(argv); break;
             case 'x': extrai_arquivos(argc, argv); break;
-            case 'r': apaga_arquivos(argv); break;
+            case 'r': apaga_arquivos(argc, argv); break;
             case 'c': mostra_metadados(argv[2]); break;
             case 'h': printf("Ajuda...\n"); break;
-            default: printf("...\n"); break;
+            default: fprintf (stderr, "Opção invalida.\n%s -h para mostrar opcoes.\n", argv[0]); break;
         }
     }
-
     return 0;
 }

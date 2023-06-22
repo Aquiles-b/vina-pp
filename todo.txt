@@ -1,21 +1,19 @@
-<A fazer> -i Opção de inserir mais membros no archive. Se um membro já existe deve
-ser substituído e colocado inseridos respeitando a ordem da linha de comando,
-ao final do archive;
-
-<A fazer> -a É igual -i porém só substitui se for mais recente.
-
 <A fazer> -m Move o membro para trás do target existente passado. Deve ocorrer
 na seção de dados.
 
-<A fazer> -x Extração dos membros indicados. Caso nenhum seja indicado extrair 
-todos.
-
-<A fazer> -r Remove membros indicados.
-
-<A fazer> -c Lista o conteúdo do archive em ordem com todas as propriedade do 
-membro e sua ordem no arquivo (igual comando tvf do tar).
-
 <A fazer> -h Help para os comandos.
+
+<A fazer> lidar com diretorios.
+
+<Feito> -i Opção de inserir mais membros no archive. Se um membro já existe deve
+ser substituído e colocado inseridos respeitando a ordem da linha de comando,
+ao final do archive;
+<Feito> -a É igual -i porém só substitui se for mais recente.
+<Feito> -x Extração dos membros indicados. Caso nenhum seja indicado extrair 
+todos.
+<Feito> -r Remove membros indicados.
+<Feito> -c Lista o conteúdo do archive em ordem com todas as propriedade do 
+membro e sua ordem no arquivo (igual comando tvf do tar).
 
 OBS:
     Caminhos sempre relativos.

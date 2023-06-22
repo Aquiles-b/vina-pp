@@ -16,6 +16,8 @@
 #define FALSE 0
 #define ATUALIZA 0
 #define SUBSTITUI 1
+#define P_ESQUERDA -1
+#define P_DIREITA 1
 
 struct membro {
     char *nome;
@@ -51,5 +53,7 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr);
 int remove_membro(struct diretorio *dir, char *nome_mbr);
 
 void remonta_archive(struct diretorio *dir);
+
+int move_membros(struct diretorio *dir, char *target, char *mbr_n);
 
 #endif // _H_VINA

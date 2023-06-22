@@ -142,6 +142,7 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
 unsigned long int escreve_dir(struct diretorio *dir, FILE *archive)
 {
     struct membro *mbr;
+    fseek(archive, dir->prox_posi, SEEK_SET);
 
     fwrite(&dir->tam, sizeof(unsigned long), 1, archive);
     fwrite(&dir->tam_max, sizeof(unsigned long), 1, archive);
@@ -375,4 +376,92 @@ void remonta_archive(struct diretorio *dir)
     fwrite(&dir->prox_posi, sizeof(unsigned long), 1, archive);
     fclose(archive);
     truncate(dir->archive, posi_final);
+}
+
+unsigned long move_dados(unsigned long posi_w, struct membro *mbr, FILE *archive)
+{
+    unsigned char *buf_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
+    unsigned long posi_r, tam_mbr, buf_tam;
+    tam_mbr = mbr->tam;
+    posi_r = mbr->comeco_dados;
+    mbr->comeco_dados = posi_w;
+    while(tam_mbr > 0) {
+        fseek(archive, posi_r, SEEK_SET);
+        if (tam_mbr >= TAM_BUFFER)
+            buf_tam = TAM_BUFFER;
+        else
+            buf_tam = tam_mbr;
+        fread(buf_w, sizeof(unsigned char), buf_tam, archive);
+        fseek(archive, posi_w, SEEK_SET);
+        fwrite(buf_w, sizeof(unsigned char), buf_tam, archive);
+        posi_r += buf_tam;
+        posi_w += buf_tam;
+        tam_mbr -= buf_tam;
+    }
+    return posi_w;
+}
+
+/* Permuta o membro do indice @ind_mbr para o lado escolhido.*/
+void permuta_membro(struct diretorio *dir, unsigned long ind_mbr, short lado)
+{
+    if (lado == P_ESQUERDA && ind_mbr == 0)
+        return;
+    if (lado == P_DIREITA && ind_mbr == dir->tam-1)
+        return;
+    FILE *archive = fopen(dir->archive, "r+");
+    unsigned long posi_w, posi_final;
+    struct membro *mbr_esq, *mbr_dir;
+    if (lado == P_DIREITA) {
+        mbr_esq = dir->mbrs[ind_mbr];
+        mbr_dir = dir->mbrs[ind_mbr + 1];
+        dir->mbrs[ind_mbr] = mbr_dir;
+        dir->mbrs[ind_mbr + 1] = mbr_esq;
+    } 
+    else {
+        mbr_esq = dir->mbrs[ind_mbr - 1];
+        mbr_dir = dir->mbrs[ind_mbr];
+        dir->mbrs[ind_mbr - 1] = mbr_dir;
+        dir->mbrs[ind_mbr] = mbr_esq;
+    }
+    mbr_esq->posicao++;
+    mbr_dir->posicao--;
+
+    move_dados(dir->prox_posi, mbr_esq, archive);
+    posi_w = move_dados(mbr_esq->comeco_dados, mbr_dir, archive);
+    move_dados(posi_w, mbr_esq, archive);
+    posi_final = escreve_dir(dir, archive);
+    fclose(archive);
+    truncate(dir->archive, posi_final);
+}
+
+/* Move o @mbr_n para imediatamente atras do @target. 
+* Retorna 0 se tudo der certo, -1 se @target for igual a @mbr_n,
+* 1 caso @target nao existe e 2 caso @mbr_n nao exista. */
+int move_membros(struct diretorio *dir, char *target, char *mbr_n)
+{
+    if (target == mbr_n)
+        return -1;
+    struct membro *mbr_target, *mbr;
+    unsigned long ind_mbr = membro_existe(dir, target);
+    if (ind_mbr == -1)
+        return 1;
+    mbr_target = dir->mbrs[ind_mbr];
+    ind_mbr = membro_existe(dir, mbr_n);
+    if (ind_mbr == -1)
+        return 2;
+
+    mbr = dir->mbrs[ind_mbr];
+    if (mbr->posicao > mbr_target->posicao) {
+        while (mbr->posicao != mbr_target->posicao + 1) {
+            permuta_membro(dir, ind_mbr, P_ESQUERDA);
+            ind_mbr--;
+        }
+    } 
+    else {
+        while (mbr->posicao < mbr_target->posicao) {
+            permuta_membro(dir, ind_mbr, P_DIREITA);
+            ind_mbr++;
+        }
+    }
+    return 0;
 }
