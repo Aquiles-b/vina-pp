@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
             case 'r': apaga_arquivos(argc, argv); break;
             case 'c': mostra_metadados(argv[2]); break;
             case 'h': imprime_ajuda(); break;
-            default: fprintf (stderr, "Opção invalida.\n%s -h para mostrar opcoes.\n", argv[0]); break;
+            default: fprintf (stderr, "%s -h para mostrar opcoes.\n", argv[0]); break;
         }
     }
     return 0;

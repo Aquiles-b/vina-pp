@@ -426,8 +426,9 @@ void permuta_membro(struct diretorio *dir, unsigned long ind_mbr, short lado)
     mbr_esq->posicao++;
     mbr_dir->posicao--;
 
+    posi_w = mbr_esq->comeco_dados;
     move_dados(dir->prox_posi, mbr_esq, archive);
-    posi_w = move_dados(mbr_esq->comeco_dados, mbr_dir, archive);
+    posi_w = move_dados(posi_w, mbr_dir, archive);
     move_dados(posi_w, mbr_esq, archive);
     posi_final = escreve_dir(dir, archive);
     fclose(archive);

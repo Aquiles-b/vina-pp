@@ -1,10 +1,9 @@
-<A fazer> -m Move o membro para trás do target existente passado. Deve ocorrer
-na seção de dados.
-
-<A fazer> -h Help para os comandos.
 
 <A fazer> lidar com diretorios.
 
+<Feito> -m Move o membro para trás do target existente passado. Deve ocorrer
+na seção de dados.
+<Feito> -h Help para os comandos.
 <Feito> -i Opção de inserir mais membros no archive. Se um membro já existe deve
 ser substituído e colocado inseridos respeitando a ordem da linha de comando,
 ao final do archive;
