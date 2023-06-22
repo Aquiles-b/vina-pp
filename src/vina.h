@@ -46,8 +46,6 @@ int monta_archive(struct diretorio *dir);
 
 void mostra_propriedades(struct diretorio *dir);
 
-void extrai_todos_membros(struct diretorio *dir);
-
 int extrai_membro(struct diretorio *dir, char *nome_mbr);
 
 int remove_membro(struct diretorio *dir, char *nome_mbr);

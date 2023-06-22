@@ -1,4 +1,5 @@
 #include "trata_entrada.h"
+#include "vina.h"
 
 void insere_arquivos(int argc, char *argv[], short tipo)
 {
@@ -14,7 +15,8 @@ void extrai_arquivos(int argc, char *argv[])
 {
     struct diretorio *dir = inicia_diretorio(argv[2]);
     if (argc == 3) {
-        extrai_todos_membros(dir);
+        for (unsigned int i = 0; i < dir->tam; i++)
+            extrai_membro(dir, dir->mbrs[i]->nome);
     }
     else {
         for (int i = 3; i < argc; i++) {

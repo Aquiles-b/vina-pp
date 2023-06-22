@@ -1,4 +1,5 @@
 #include "vina.h"
+#include "diretorios.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -267,7 +268,10 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
     if (ind_mbr == -1)
         return 1;
 
-    arq = fopen(dir->mbrs[ind_mbr]->nome, "w");
+    char dir_atual[256];
+    getcwd(dir_atual, sizeof(char) * 256);
+    char *nome_arq = monta_hierarquia(dir->mbrs[ind_mbr]->nome);
+    arq = fopen(nome_arq, "w");
     fseek(archive, dir->mbrs[ind_mbr]->comeco_dados, SEEK_SET);
     tam_mbr = dir->mbrs[ind_mbr]->tam;
     while (status) {
@@ -278,38 +282,8 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
             status = FALSE;
         }
     }
+    chdir(dir_atual);
     return 0;
-}
-
-void extrai_todos_membros(struct diretorio *dir)
-{
-    if (dir->tam == 0)
-        return;
-    FILE *arq;
-    FILE *archive = fopen(dir->archive, "w");
-    unsigned long tam_mbr, limite_buffer, i = 0;
-    short status = TRUE;
-    unsigned char *buffer_w = malloc(sizeof(unsigned char) * TAM_BUFFER);
-
-    arq = fopen(dir->mbrs[i]->nome, "w");
-    fseek(archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
-    tam_mbr = dir->mbrs[i]->tam;
-    while (status) {
-        limite_buffer = le_dados_membro(&tam_mbr, buffer_w, archive);
-        fwrite(buffer_w, sizeof(unsigned char), limite_buffer, arq);
-        if (tam_mbr == 0) {
-            fclose(arq);
-            if (i != dir->tam - 1) {
-                i++;
-                arq = fopen(dir->mbrs[i]->nome, "w");
-                tam_mbr = dir->mbrs[i]->tam;
-                fseek(archive, dir->mbrs[i]->comeco_dados, SEEK_SET);
-            }
-            else {
-                status = FALSE;
-            }
-        }
-    }
 }
 
 int remove_membro(struct diretorio *dir, char *nome_mbr)
