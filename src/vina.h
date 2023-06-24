@@ -3,12 +3,14 @@
 
 #include <stdio.h>
 #include <pwd.h>
+#include <utime.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <grp.h>
 
 #define TAM_BUFFER 1024
 #define QNT_MBRS 8
@@ -25,6 +27,7 @@ struct membro {
     unsigned long comeco_dados;
     unsigned long posicao;
     uid_t uid;
+    gid_t gid;
     off_t tam;
     mode_t permissoes;
     time_t ult_mod;

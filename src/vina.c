@@ -1,9 +1,5 @@
 #include "vina.h"
 #include "diretorios.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 /* Cancela a execucao do programa por falta de memoria principal.*/
 void falta_memoria()
@@ -43,6 +39,7 @@ void ler_archive(struct diretorio *dir, FILE *archive)
         fread(&aux->comeco_dados, sizeof(unsigned long), 1, archive);
         fread(&aux->posicao, sizeof(unsigned long), 1, archive);
         fread(&aux->uid, sizeof(uid_t), 1, archive);
+        fread(&aux->gid, sizeof(gid_t), 1, archive);
         fread(&aux->tam, sizeof(off_t), 1, archive);
         fread(&aux->permissoes, sizeof(mode_t), 1, archive);
         fread(&aux->ult_mod, sizeof(time_t), 1, archive);
@@ -74,6 +71,7 @@ void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long
     mem->tam_nome = strlen(nome);
     mem->comeco_dados = tam;
     mem->uid = props.st_uid;
+    mem->gid = props.st_gid;
     mem->tam = props.st_size;
     mem->permissoes = props.st_mode;
     mem->ult_mod = props.st_mtim.tv_sec;
@@ -165,6 +163,7 @@ unsigned long int escreve_dir(struct diretorio *dir, FILE *archive)
         fwrite(&mbr->comeco_dados, sizeof(unsigned long), 1, archive);
         fwrite(&mbr->posicao, sizeof(unsigned long), 1, archive);
         fwrite(&mbr->uid, sizeof(uid_t), 1, archive);
+        fwrite(&mbr->gid, sizeof(gid_t), 1, archive);
         fwrite(&mbr->tam, sizeof(off_t), 1, archive);
         fwrite(&mbr->permissoes, sizeof(mode_t), 1, archive);
         fwrite(&mbr->ult_mod, sizeof(time_t), 1, archive);
@@ -260,12 +259,24 @@ void mostra_propriedades(struct diretorio *dir)
         mbr = dir->mbrs[i];
         printf ("%ldº: ", mbr->posicao);
         imprime_permissoes(mbr);
-        printf ("%s ", getpwuid(mbr->uid)->pw_name);
+        printf ("%s/", getpwuid(mbr->uid)->pw_name);
+        printf ("%s ", getgrgid(mbr->gid)->gr_name);
         printf ("%ld ", mbr->tam);
         imprime_data(mbr);
         printf ("%s\n", mbr->nome);
         i++;
     }
+}
+
+void altera_metadados(struct membro *mbr)
+{
+    struct utimbuf novos_md;
+    novos_md.actime = time(NULL);
+    novos_md.modtime = mbr->ult_mod;
+    utime(mbr->nome, &novos_md);
+    chmod(mbr->nome, mbr->permissoes);
+    chown(mbr->nome, mbr->uid, mbr->gid);
+    
 }
 
 /* Extrai o membro pelo nome. Caso o membro nao exista retorna 1. */
@@ -297,6 +308,7 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
             status = FALSE;
         }
     }
+    altera_metadados(dir->mbrs[ind_mbr]);
     chdir(dir_atual);
     return 0;
 }
