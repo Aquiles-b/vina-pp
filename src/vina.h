@@ -69,4 +69,7 @@ void remonta_archive(struct diretorio *dir);
 * 1 caso @target nao existe e 2 caso @mbr_n nao exista. */
 int move_membros(struct diretorio *dir, char *target, char *mbr_n);
 
+/* Desaloca toda memoria da struct diretorio. */
+void libera_diretorio(struct diretorio *dir);
+
 #endif // _H_VINA

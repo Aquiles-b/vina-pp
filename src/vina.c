@@ -1,5 +1,8 @@
 #include "vina.h"
 #include "diretorios.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Cancela a execucao do programa por falta de memoria principal.*/
 void falta_memoria()
@@ -67,8 +70,10 @@ struct diretorio *inicia_diretorio(char *archive)
 /* Pega os metadados de um arquivo e salva na struct membro. */
 void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long tam)
 {
-    mem->nome = nome;
-    mem->tam_nome = strlen(nome);
+    unsigned int tnome = strlen(nome);
+    mem->nome = malloc(sizeof(char) * (tnome + 1));
+    strcpy(mem->nome, nome);
+    mem->tam_nome = tnome;
     mem->comeco_dados = tam;
     mem->uid = props.st_uid;
     mem->gid = props.st_gid;
@@ -215,6 +220,7 @@ int monta_archive(struct diretorio *dir)
     escreve_dados_mbrs(dir, buffer_write, archive);
     escreve_dir(dir, archive);
     fclose(archive);
+    free(buffer_write);
 
     return 0;
 }
@@ -310,6 +316,9 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
     }
     altera_metadados(dir->mbrs[ind_mbr]);
     chdir(dir_atual);
+    free(buffer_w);
+    fclose(archive);
+
     return 0;
 }
 
@@ -471,4 +480,15 @@ int move_membros(struct diretorio *dir, char *target, char *mbr_n)
         }
     }
     return 0;
+}
+
+/* Desaloca toda memoria da struct diretorio. */
+void libera_diretorio(struct diretorio *dir)
+{
+    for (unsigned long i = 0; i < dir->tam; i++) {
+        free(dir->mbrs[i]->nome);
+        free(dir->mbrs[i]);
+    }
+    free(dir->mbrs);
+    free(dir);
 }

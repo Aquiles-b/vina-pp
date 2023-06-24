@@ -1,4 +1,5 @@
 #include "trata_entrada.h"
+#include "vina.h"
 
 /* Verifica se a entrada esta correta. Retorna 1 caso sucesso e 
  * 0 caso contrario.*/
@@ -22,6 +23,7 @@ void insere_arquivos(int argc, char *argv[], short tipo)
             fprintf(stderr, "Nao foi possivel ler %s\n", argv[i]);
     }
     monta_archive(dir);
+    libera_diretorio(dir);
 }
 
 /* Extrai os arquivos passados no prompt, se nenhum for informado 
@@ -43,6 +45,7 @@ void extrai_arquivos(int argc, char *argv[])
                 fprintf(stderr, "Nao foi encontrado %s dentro do archive.\n", argv[i]);
         }
     }
+    libera_diretorio(dir);
 }
 
 /* Mostra os metadados de todos os membros do archive. */
@@ -54,6 +57,7 @@ void mostra_metadados(char *archive)
         return;
     }
     mostra_propriedades(dir);
+    libera_diretorio(dir);
 }
 
 /* Remove os arquivos do archive informados no prompt. */
@@ -69,6 +73,7 @@ void apaga_arquivos(int argc, char *argv[])
             fprintf(stderr, "Membro %s nao existe no archive\n", argv[i]);
     }
     remonta_archive(dir);
+    libera_diretorio(dir);
 }
 
 /* Troca a posicao de um membro para imediatamente atras de outro membro
@@ -85,6 +90,7 @@ void reposiciona_membro(int argc, char *argv[])
         return;
     }
     int status = move_membros(dir, argv[2], argv[4]);
+    libera_diretorio(dir);
     if (status == 0)
         return;
     else if (status == -1)
