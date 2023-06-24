@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
+/* Cancela a execucao do programa por falta de memoria principal.*/
 void falta_memoria()
 {
     fprintf(stderr, "Erro: Falta de memoria.\n");
@@ -19,6 +20,7 @@ void cria_novo_dir(struct diretorio *dir, char *arc)
     dir->prox_posi = 8;
 }
 
+/* Le os dados de um archive existente. */
 void ler_archive(struct diretorio *dir, FILE *archive)
 {
     unsigned long posi_dir;
@@ -49,6 +51,7 @@ void ler_archive(struct diretorio *dir, FILE *archive)
     fclose(archive);
 }
 
+/* Le ou cria um archive. Retorna um ponteiro para struct diretorio. */
 struct diretorio *inicia_diretorio(char *archive)
 {
     struct diretorio *dir = malloc(sizeof(struct diretorio));
@@ -64,6 +67,7 @@ struct diretorio *inicia_diretorio(char *archive)
     return dir;
 }
 
+/* Pega os metadados de um arquivo e salva na struct membro. */
 void pega_props(char *nome, struct membro *mem, struct stat props, unsigned long tam)
 {
     mem->nome = nome;
@@ -81,6 +85,7 @@ void aumenta_tam_dir(struct diretorio *dir)
     dir->mbrs = realloc(dir->mbrs, sizeof(struct membro *) * dir->tam_max);
 }
 
+/* Retorna o indice do membro se ele existir e -1 caso contrario. */
 unsigned long membro_existe(struct diretorio *dir, char *nome)
 {
     unsigned long i = 0, ind_mbr = -1;
@@ -93,6 +98,9 @@ unsigned long membro_existe(struct diretorio *dir, char *nome)
     return ind_mbr;
 }
 
+/* Adiciona um membro ao archive. Se o tipo for SUBSTITUI vai substituir o 
+* membro caso ele exista. Se for ATUALIZA, so ira substituir o membro caso o 
+* novo seja mais recente. */
 int add_membro(char *nome, struct diretorio *dir, short tipo)
 {
     struct stat propriedades;
@@ -125,6 +133,8 @@ int add_membro(char *nome, struct diretorio *dir, short tipo)
     return 0;
 }
 
+/* Le o dados de um membro e guarda no buffer passado. Retorna a quantidade 
+* de bytes lidos. */
 unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FILE *arq)
 {
     long status = (long) *tam_mbr - TAM_BUFFER;
@@ -140,6 +150,7 @@ unsigned long le_dados_membro(unsigned long *tam_mbr, unsigned char *buffer, FIL
     return aux;
 }
 
+/* Escreve os dados da struct diretorio no archive. */
 unsigned long int escreve_dir(struct diretorio *dir, FILE *archive)
 {
     struct membro *mbr;
@@ -162,6 +173,7 @@ unsigned long int escreve_dir(struct diretorio *dir, FILE *archive)
     return ftell(archive);
 }
 
+/* Escreve todos os dados dos membros no archive. */
 void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write, FILE *archive)
 {
     unsigned long tam_mbr, limite_buffer, i = 0;
@@ -186,6 +198,7 @@ void escreve_dados_mbrs(struct diretorio *dir, unsigned char *buffer_write, FILE
     }
 }
 
+/* Escreve o archive. */
 int monta_archive(struct diretorio *dir)
 {
     if (dir->tam == 0) {
@@ -238,6 +251,7 @@ void imprime_data(struct membro *mbr)
     printf ("%s ", data_fmt);
 }
 
+/* Imprime os metadados de todos os membros. */
 void mostra_propriedades(struct diretorio *dir)
 {
     struct membro *mbr;
@@ -254,6 +268,7 @@ void mostra_propriedades(struct diretorio *dir)
     }
 }
 
+/* Extrai o membro pelo nome. Caso o membro nao exista retorna 1. */
 int extrai_membro(struct diretorio *dir, char *nome_mbr)
 {
     if (dir->tam == 0)
@@ -286,6 +301,7 @@ int extrai_membro(struct diretorio *dir, char *nome_mbr)
     return 0;
 }
 
+/* Remove o membro pelo nome. Se o membro nao existir retorna 1. */
 int remove_membro(struct diretorio *dir, char *nome_mbr)
 {
     long int ind_mbr;
@@ -304,6 +320,7 @@ int remove_membro(struct diretorio *dir, char *nome_mbr)
     return 0;
 }
 
+/* Concerta os buracos deixados por remocoes. */
 unsigned long int desfragmenta_archive(struct diretorio *dir, FILE *archive)
 {
     unsigned long limite_buffer, posi_w, posi_r, tam_mbr, i = 0;
@@ -336,6 +353,7 @@ unsigned long int desfragmenta_archive(struct diretorio *dir, FILE *archive)
     return posi_w;
 }
 
+/* Reescreve o archive (atualiza). */
 void remonta_archive(struct diretorio *dir)
 {
     unsigned long int posi_final;
@@ -352,6 +370,8 @@ void remonta_archive(struct diretorio *dir)
     truncate(dir->archive, posi_final);
 }
 
+/* Reescreve os dados de um membro no archive 
+ * comecando na posicao @posi_w */
 unsigned long move_dados(unsigned long posi_w, struct membro *mbr, FILE *archive)
 {
     unsigned char *buf_w = malloc(sizeof(unsigned char) * TAM_BUFFER);

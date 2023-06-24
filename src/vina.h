@@ -38,20 +38,32 @@ struct diretorio {
     struct membro **mbrs;
 };
 
+/* Le ou cria um archive. Retorna um ponteiro para struct diretorio. */
 struct diretorio *inicia_diretorio(char *archive);
 
+/* Adiciona um membro ao archive. Se o tipo for SUBSTITUI vai substituir o 
+* membro caso ele exista. Se for ATUALIZA, so ira substituir o membro caso o 
+* novo seja mais recente. */
 int add_membro(char *nome, struct diretorio *dir, short tipo);
 
+/* Escreve o archive. */
 int monta_archive(struct diretorio *dir);
 
+/* Imprime os metadados de todos os membros. */
 void mostra_propriedades(struct diretorio *dir);
 
+/* Extrai o membro pelo nome. Caso o membro nao exista retorna 1. */
 int extrai_membro(struct diretorio *dir, char *nome_mbr);
 
+/* Remove o membro pelo nome. Se o membro nao existir retorna 1. */
 int remove_membro(struct diretorio *dir, char *nome_mbr);
 
+/* Reescreve o archive (atualiza). */
 void remonta_archive(struct diretorio *dir);
 
+/* Move o @mbr_n para imediatamente atras do @target. 
+* Retorna 0 se tudo der certo, -1 se @target for igual a @mbr_n,
+* 1 caso @target nao existe e 2 caso @mbr_n nao exista. */
 int move_membros(struct diretorio *dir, char *target, char *mbr_n);
 
 #endif // _H_VINA

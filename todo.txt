@@ -1,6 +1,5 @@
 
-<A fazer> lidar com diretorios.
-
+<Feito> lidar com diretorios.
 <Feito> -m Move o membro para trás do target existente passado. Deve ocorrer
 na seção de dados.
 <Feito> -h Help para os comandos.
