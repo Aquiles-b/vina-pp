@@ -1,6 +1,6 @@
 Programação 2 - Projeto 4
 
-#Arquivos
+# Arquivos
  src/
     main.c
         - Faz a interface com o usuário. Contém a função main.
@@ -15,7 +15,7 @@ Programação 2 - Projeto 4
     vina.h
         - Módulo principal. Responsável por todo funcionamento do arquivador.
 
-#Estruturas
+# Estruturas
     struct membro: Guarda informações de um membro do archive, sendo elas o nome,
     tamanho do nome (para facilitar a leitura após o archive ser escrito), tamanho
     do arquivo em bytes, sua posição de ordem, posição de onde começa os dados e
@@ -25,7 +25,7 @@ Programação 2 - Projeto 4
     membros, próxima posição de escrita para um novo membro e um vetor de ponteiros
     para struct membro. 
 
-#Algoritmos 
+# Algoritmos 
         Um algoritmo que vale comentar é o de permutação, responsável pelo funcionamento
     da flag -m. Ao tentar mover os dados de um membro para imediatamente atrás de outro
     membro especificado, surgem diversos conflitos relacionados ao tamanho da sessão de 
@@ -38,7 +38,7 @@ Programação 2 - Projeto 4
     que o mbr_2 finalizou, o último passo é reescrever a área de diretório no final 
     e truncar os bytes sobrando do arquivo.
 
-#Conclusões
+# Conclusões
         Com esse projeto foi possível compreender melhor a manipulação de arquivos e
     diretórios. Além de agregar o conhecimento de novas bibliotecas padrões de C.
     Outro ponto, foi a apresentação de uma nova estrutura para organizar o projeto,
